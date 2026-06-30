@@ -2,8 +2,9 @@
 .env
 .kaggle/
 
-# Données (jamais versionnées)
-data/
+# Données : le dossier data/ est versionné (vide) mais son contenu est ignoré
+# via data/.gitignore. On ne met donc PAS `data/` ici, sinon ce .gitignore
+# interne ne serait jamais suivi.
 *.pkl
 *.npz
 *.p

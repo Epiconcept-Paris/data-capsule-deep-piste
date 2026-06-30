@@ -1,0 +1,6 @@
+[submodule "modules/GMIC"]
+	path = modules/GMIC
+	url = https://github.com/nyukat/GMIC.git
+[submodule "modules/selective-classification"]
+	path = modules/selective-classification
+	url = https://github.com/EmilienJemelen/selective-classification.git

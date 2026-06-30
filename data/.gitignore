@@ -1,0 +1,5 @@
+# Le dossier data/ existe dans le dépôt (point de montage du volume Docker),
+# mais son CONTENU n'est JAMAIS versionné : images RSNA (~300 Go), prétraitements,
+# checkpoints, etc. On ignore tout sauf ce fichier .gitignore lui-même.
+*
+!.gitignore

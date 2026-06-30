@@ -4,8 +4,44 @@ Pour l'instant : `flowchart()`, qui dessine un organigramme en SORTIE d'une cell
 de code (matplotlib). On évite ainsi Mermaid, qui ne s'affiche que dans certaines
 versions de JupyterLab et reste blanc partout ailleurs.
 """
-import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch
+import os
+
+
+def course_root():
+    """Racine du repo cloné, telle que vue depuis le notebook (conteneur OU local).
+
+    Aucun chemin n'est codé en dur : on suit l'endroit où la personne a fait son
+    `git clone`.
+      1. Si la variable d'environnement `COURSE_ROOT` existe (définie par l'image
+         Docker = point de montage du repo), on l'utilise.
+      2. Sinon on remonte les dossiers depuis ce fichier jusqu'à trouver le marqueur
+         du repo (`pyproject.toml`) — fonctionne aussi hors conteneur.
+    """
+    env = os.environ.get("COURSE_ROOT")
+    if env:
+        return env
+    d = os.path.dirname(os.path.abspath(__file__))
+    while d != os.path.dirname(d):
+        if os.path.isfile(os.path.join(d, "pyproject.toml")):
+            return d
+        d = os.path.dirname(d)
+    # Repli : le dossier du notebook lui-même.
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def data_path(*parts):
+    """Chemin sous `<repo>/data/...` (volume persistant, ignoré par git)."""
+    return os.path.join(course_root(), "data", *parts)
+
+
+def gmic_dir():
+    """Sous-module GMIC : `<repo>/modules/GMIC`."""
+    return os.path.join(course_root(), "modules", "GMIC")
+
+
+def selclass_dir():
+    """Sous-module selective-classification : `<repo>/modules/selective-classification`."""
+    return os.path.join(course_root(), "modules", "selective-classification")
 
 
 def flowchart(steps, title=None, width=8.5, box_h=0.62, gap=0.45,
@@ -16,6 +52,9 @@ def flowchart(steps, title=None, width=8.5, box_h=0.62, gap=0.45,
     Le diagramme est rendu via `plt.show()` -> visible dans tout Jupyter, nbconvert
     et l'aperçu GitHub.
     """
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import FancyBboxPatch
+
     n = len(steps)
     unit = box_h + gap
     fig, ax = plt.subplots(figsize=(width, n * unit + 0.3))

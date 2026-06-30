@@ -1,8 +1,14 @@
 # Breast Cancer Course — image GPU + JupyterLab
 #
 # Même stack torch que la VM (torch 2.4.1 / cu121 / torchvision 0.19.1).
-# L'image clone elle-même GMIC et selective-classification : rien à fournir
-# à la main. Les DONNÉES ne sont jamais dans l'image (montées en volume).
+# L'image ne contient QUE l'environnement Python/CUDA. Le dépôt entier (notebooks,
+# sous-modules modules/GMIC + modules/selective-classification, et data/) est MONTÉ
+# en volume au runtime sur /home/deep-piste/course (cf. docker-run.sh), de sorte que
+# JupyterLab affiche exactement l'arborescence du dépôt cloné — où qu'il ait été cloné.
+#
+# L'utilisateur du conteneur reprend l'UID/GID de celui qui construit l'image
+# (build-args HOST_UID/HOST_GID) : les fichiers écrits dans le dépôt monté lui
+# appartiennent, et non à root.
 
 FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
 
@@ -11,40 +17,42 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1
 
 # Dépendances système :
-#  - git    : pour cloner GMIC + selective-classification
 #  - libgl1 / libglib2.0-0 : requis par opencv pour le pré-traitement (ch 2.5)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git \
         libgl1 \
         libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /root
+# Dépendances Python des 6 chapitres, installées avec uv (en tant que root, dans
+# l'env Python de l'image où vit torch -> torch/torchvision NE sont PAS réinstallés,
+# car absents de pyproject.toml).
+COPY pyproject.toml /tmp/pyproject.toml
+RUN pip install --no-cache-dir uv \
+    && uv pip install --system --no-cache -r /tmp/pyproject.toml
 
-# Clone des deux dépôts externes. GMIC embarque ses 5 poids pré-entraînés
-# (models/sample_model_*.p, ~60 Mo chacun) directement dans le dépôt git.
-# On échoue explicitement si les poids manquent après le clone.
-RUN git clone --depth 1 https://github.com/nyukat/GMIC.git /root/GMIC \
-    && git clone --depth 1 https://github.com/EmilienJemelen/selective-classification.git /root/selective-classification \
-    && test -f /root/GMIC/models/sample_model_1.p \
-        || (echo "ERREUR: poids GMIC absents après le clone" && exit 1)
+# Utilisateur non-root, aligné sur celui qui build (évite les fichiers root dans le
+# dépôt monté). Le nom est cosmétique ; seuls l'UID/GID comptent pour les permissions.
+ARG HOST_UID=1000
+ARG HOST_GID=1000
+RUN groupadd -g "${HOST_GID}" deep-piste 2>/dev/null || true \
+    && useradd -m -u "${HOST_UID}" -g "${HOST_GID}" -s /bin/bash deep-piste 2>/dev/null || true \
+    && mkdir -p /home/deep-piste/course \
+    && chown -R "${HOST_UID}:${HOST_GID}" /home/deep-piste
 
-# Dépendances Python des 6 chapitres (torch/torchvision viennent de l'image de base).
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+# HOME = home de l'utilisateur (config/cache Jupyter). COURSE_ROOT = point de montage
+# du dépôt : les notebooks s'y réfèrent (course_utils.course_root()), aucun chemin en dur.
+ENV HOME=/home/deep-piste \
+    COURSE_ROOT=/home/deep-piste/course
 
-# Contenu du cours (re-monté en volume au runtime pour édition à chaud).
-COPY notebooks /root/course/notebooks
-COPY README.md /root/course/README.md
-
-WORKDIR /root/course
+USER deep-piste
+WORKDIR /home/deep-piste/course
 
 EXPOSE 8888
 
 # Accès via tunnel SSH vers 127.0.0.1 → token désactivé (réseau local au tunnel).
-# root_dir=/root pour que GMIC, selective-classification et data soient visibles
-# dans l'explorateur de fichiers JupyterLab.
+# root_dir = le dépôt monté -> l'explorateur JupyterLab montre l'arbo du dépôt
+# (notebooks/, modules/, data/...).
 CMD ["jupyter", "lab", \
-     "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", \
+     "--ip=0.0.0.0", "--port=8888", "--no-browser", \
      "--ServerApp.token=", "--ServerApp.password=", \
-     "--ServerApp.root_dir=/root"]
+     "--ServerApp.root_dir=/home/deep-piste/course"]

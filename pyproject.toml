@@ -1,0 +1,40 @@
+[project]
+name = "breast-cancer-course"
+version = "0.1.0"
+description = "Cours Deep Learning sur mammographies (RSNA) — 6 chapitres notebooks (PyTorch → risques garantis)."
+requires-python = ">=3.10"
+
+# torch / torchvision / torchaudio sont fournis par l'image de base
+# pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime -> NE PAS les lister ici
+# (uv les réinstallerait, conflit + téléchargement CUDA inutile).
+dependencies = [
+    # --- Jupyter ---
+    "jupyterlab>=4.0",
+    "ipywidgets>=8.0",
+
+    # --- Stack scientifique (ch 2 à 6) ---
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "matplotlib",
+    "plotly",
+    "tqdm",
+
+    # --- Image / DICOM, pré-traitement (ch 2.5) ---
+    "opencv-python-headless",
+    "imageio",
+    "h5py",
+    "pydicom==3.0.2",
+    "pylibjpeg==2.1.0",
+    "pylibjpeg-libjpeg",
+    "pylibjpeg-openjpeg",
+
+    # --- Augmentation GPU (ch 5) ---
+    "kornia==0.8.3",
+
+    # --- Téléchargement des jeux de données (ch 2.5+) ---
+    # kaggle récent (>=1.7) : les tokens d'API actuels exigent une version 2.x-compatible.
+    "kaggle",
+    "kagglehub",
+]

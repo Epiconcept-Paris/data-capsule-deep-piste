@@ -1,8 +1,17 @@
+# L'image ne COPIE que pyproject.toml ; tout le reste est monté au runtime.
+# On garde donc le contexte de build minimal.
 .git
 .gitignore
+.gitmodules
 .env
 .venv
+.kaggle
 data
+modules
+notebooks
+README.md
+docker-build.sh
+docker-run.sh
 **/.ipynb_checkpoints
 **/__pycache__
 *.pyc
