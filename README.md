@@ -121,14 +121,17 @@ Les notebooks téléchargent le jeu RSNA via l'API Kaggle. Les identifiants se p
 **à la racine du dépôt** (jamais dans l'image, et ignorés par git), montés en lecture
 seule dans le conteneur.
 
+Le dossier **`.kaggle/` existe déjà dans le dépôt** (vide ; voir `.kaggle/.gitignore`) :
+il suffit d'y déposer la clé.
+
 1. Sur [kaggle.com](https://www.kaggle.com) → *Account* → *Create New API Token*
    → télécharge `kaggle.json`.
-2. À la racine du dépôt cloné :
+2. Copie-le dans le dossier `.kaggle/` à la racine du dépôt cloné :
    ```bash
-   mkdir -p .kaggle
    mv ~/Downloads/kaggle.json .kaggle/kaggle.json
    chmod 600 .kaggle/kaggle.json
    ```
+   La clé est ignorée par git (jamais committée).
 3. `docker-run.sh` monte `<dépôt>/.kaggle` → `~/.kaggle` dans le conteneur automatiquement.
 
 Vous pouvez aussi copier `.env.example` en `.env` (à la racine du dépôt) et y mettre
@@ -140,9 +143,11 @@ Vous pouvez aussi copier `.env.example` en `.env` (à la racine du dépôt) et y
 
 - Base : `pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime` (même stack torch que la VM).
 - Installe les dépendances Python des 6 chapitres avec **`uv`** (déclarées dans `pyproject.toml`).
-- Crée un utilisateur non-root **avec l'UID/GID de celui qui build** (`--build-arg
-  HOST_UID/HOST_GID`, posés par `docker-build.sh`) : les fichiers écrits dans le dépôt
-  monté lui appartiennent, pas à `root`.
+- Crée un utilisateur non-root `deep-piste` **avec l'UID/GID de celui qui build**
+  (`--build-arg HOST_UID/HOST_GID`, posés par `docker-build.sh`) : les fichiers écrits
+  dans le dépôt monté lui appartiennent, pas à `root`. Le conteneur tourne donc en
+  `USER deep-piste` — **jamais root** (si le build est lancé en root, ex. sous WSL,
+  l'UID retombe sur `1000` pour garantir un utilisateur non privilégié).
 - Démarre JupyterLab sur le port 8888, `root_dir = COURSE_ROOT`.
 
 L'image **ne contient que l'environnement** (ni données, ni sous-modules, ni notebooks).
@@ -169,8 +174,9 @@ data-capsule-deep-piste/
 ├── pyproject.toml         # dépendances Python des 6 chapitres (installées via uv)
 ├── docker-build.sh        # construit l'image
 ├── docker-run.sh          # lance JupyterLab (GPU + volumes)
-├── .env.example           # gabarit pour les identifiants Kaggle
+├── .env.example           # gabarit pour les identifiants Kaggle (alternative à .kaggle/)
 ├── .gitmodules            # déclare les 2 sous-modules
+├── .kaggle/                # dépose ici kaggle.json (présent, clé ignorée par git)
 ├── data/                  # données — vide dans git, contenu ignoré (data/.gitignore)
 │   ├── in/                #   entrées brutes téléchargées (RSNA, échantillon, CIFAR)
 │   └── work/              #   sorties produites (prétraitements, crops, checkpoints)

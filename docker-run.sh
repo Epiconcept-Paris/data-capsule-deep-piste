@@ -23,19 +23,19 @@ if [ ! -f modules/GMIC/models/sample_model_1.p ]; then
 fi
 
 # Identifiants Kaggle, relatifs au dépôt (jamais via $HOME) :
-#  - soit un dossier .kaggle/ à la racine du dépôt (kaggle.json), monté en ro ;
-#  - soit un fichier .env (KAGGLE_USERNAME / KAGGLE_KEY).
-# Les deux sont ignorés par git (.gitignore).
-KAGGLE_ARGS=()
-if [ -d "$REPO_DIR/.kaggle" ]; then
-    KAGGLE_ARGS+=(-v "$REPO_DIR/.kaggle":/home/deep-piste/.kaggle:ro)
-fi
+#  - le dossier .kaggle/ (versionné dans le dépôt) où l'utilisateur dépose kaggle.json,
+#    monté en lecture seule sur /home/deep-piste/.kaggle ;
+#  - ou un fichier .env (KAGGLE_USERNAME / KAGGLE_KEY).
+# La clé et le .env sont ignorés par git.
+mkdir -p "$REPO_DIR/.kaggle"
+KAGGLE_ARGS=(-v "$REPO_DIR/.kaggle":/home/deep-piste/.kaggle:ro)
 
 ENV_ARGS=()
 [ -f "$REPO_DIR/.env" ] && ENV_ARGS+=(--env-file "$REPO_DIR/.env")
 
-if [ ${#KAGGLE_ARGS[@]} -eq 0 ] && [ ${#ENV_ARGS[@]} -eq 0 ]; then
-    echo "AVERTISSEMENT : ni .kaggle/ ni .env trouvés -> le téléchargement Kaggle (ch1) échouera." >&2
+if [ ! -f "$REPO_DIR/.kaggle/kaggle.json" ] && [ ${#ENV_ARGS[@]} -eq 0 ]; then
+    echo "AVERTISSEMENT : $REPO_DIR/.kaggle/kaggle.json absent et pas de .env" >&2
+    echo "  -> dépose ta clé Kaggle dans .kaggle/kaggle.json, sinon le téléchargement (ch1) échouera." >&2
 fi
 
 echo "Montage du dépôt : $REPO_DIR -> $COURSE_MNT"

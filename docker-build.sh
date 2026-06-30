@@ -14,6 +14,11 @@ REAL_USER="${SUDO_USER:-$(id -un)}"
 HOST_UID="$(id -u "$REAL_USER")"
 HOST_GID="$(id -g "$REAL_USER")"
 
+# Garantie « jamais root » : si on build en tant que root (UID/GID 0, typique sous
+# WSL), on retombe sur 1000 pour que l'utilisateur du conteneur ne soit JAMAIS root.
+[ "$HOST_UID" = "0" ] && { echo ">> build en root -> HOST_UID forcé à 1000 (jamais root dans le conteneur)"; HOST_UID=1000; }
+[ "$HOST_GID" = "0" ] && HOST_GID=1000
+
 cd "$(dirname "$0")"
 echo ">> docker build -t ${IMAGE}  (HOST_UID=${HOST_UID} HOST_GID=${HOST_GID})"
 docker build \

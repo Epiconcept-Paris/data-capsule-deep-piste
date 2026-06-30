@@ -1,0 +1,8 @@
+# Dépose ICI ta clé Kaggle : kaggle.json
+# (sur kaggle.com -> Account -> Create New API Token -> télécharge kaggle.json).
+#
+# Ce dossier est versionné (présent dans le dépôt) mais son CONTENU est ignoré :
+# aucune clé n'est jamais committée. docker-run.sh monte ce dossier en lecture seule
+# sur /home/deep-piste/.kaggle dans le conteneur (le notebook 1 y lit kaggle.json).
+*
+!.gitignore

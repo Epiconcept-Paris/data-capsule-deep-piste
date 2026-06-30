@@ -1,6 +1,8 @@
-# Secrets / config locale
+# Secrets / config locale.
+# .env est ignoré. Le dossier .kaggle/ est versionné (présent, vide) mais la clé
+# qu'on y dépose est ignorée via .kaggle/.gitignore — comme data/. On ne met donc
+# PAS `.kaggle/` ici, sinon ce .gitignore interne ne serait jamais suivi.
 .env
-.kaggle/
 
 # Données : le dossier data/ est versionné (vide) mais son contenu est ignoré
 # via data/.gitignore. On ne met donc PAS `data/` ici, sinon ce .gitignore
