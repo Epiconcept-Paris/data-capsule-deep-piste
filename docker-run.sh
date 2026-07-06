@@ -45,17 +45,41 @@ fi
 
 echo "Montage du dépôt : $REPO_DIR -> $COURSE_MNT"
 
+# data/in/ et data/work/ peuvent contenir des SYMLINKS ABSOLUS vers un gros volume de
+# données partagé de la machine hôte (ex. $REAL_HOME/data/..., un jeu réel de plusieurs
+# dizaines de Go, commun à d'autres projets -> on ne le copie ni ne le déplace dans le
+# dépôt). Un symlink absolu ne "voit" que ce qui est monté DANS le conteneur : sans ce
+# montage, il pointe dans le vide et les notebooks croient les données absentes. On
+# monte donc aussi ce dossier, en lecture seule, au MÊME chemin absolu que sur l'hôte
+# (transparent pour les symlinks) — s'il n'existe pas (machine sans ce volume partagé,
+# ex. laptop), on ne monte rien, aucun impact.
+# REAL_HOME (pas $HOME) : sous `sudo`, $HOME devient /root et casserait la résolution.
+REAL_HOME="$(getent passwd "${SUDO_USER:-$(id -un)}" | cut -d: -f6)"
+DATA_ARGS=()
+if [ -d "$REAL_HOME/data" ]; then
+    echo "Montage des données partagées : $REAL_HOME/data (lecture seule)"
+    DATA_ARGS=(-v "$REAL_HOME/data":"$REAL_HOME/data":ro)
+fi
+
 # docker run, options :
 #   --rm                   : supprime le conteneur à l'arrêt (aucun résidu).
 #   -it                    : interactif + terminal (voir les logs, Ctrl-C).
 #   --gpus all             : donne accès aux GPU NVIDIA (nvidia-container-toolkit requis).
+#   --ipc=host             : partage le /dev/shm de l'hôte. Sans ça, Docker limite la
+#                            mémoire partagée du conteneur à 64 Mo ; or les workers du
+#                            DataLoader PyTorch y font transiter leurs batches -> avec
+#                            des images haute résolution ils la saturent et meurent en
+#                            "Bus error" (ch5).
 #   -p 127.0.0.1:8888:8888 : publie le port 8888 UNIQUEMENT sur la boucle locale de l'hôte.
 #   -v REPO_DIR:COURSE_MNT : monte le dépôt entier dans le conteneur.
 #   "${KAGGLE_ARGS[@]}"    : ajoute le montage .kaggle défini plus haut.
+#   "${DATA_ARGS[@]}"      : ajoute le montage des données partagées, si présentes.
 #   "$IMAGE"               : l'image à lancer (sa CMD démarre JupyterLab).
 docker run --rm -it \
     --gpus all \
+    --ipc=host \
     -p 127.0.0.1:8888:8888 \
     -v "$REPO_DIR":"$COURSE_MNT" \
     "${KAGGLE_ARGS[@]}" \
+    "${DATA_ARGS[@]}" \
     "$IMAGE"

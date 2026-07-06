@@ -9,7 +9,7 @@ Deux familles d'outils :
    (matplotlib). On évite ainsi Mermaid, qui ne s'affiche que dans certaines
    versions de JupyterLab et reste blanc partout ailleurs.
 
-3. Détection de capacités matérielles (`pick_device`, `make_loader`,
+3. Détection de capacités matérielles (`pick_device`, `dataloader_kwargs`,
    `describe_env`, ...) : permet aux notebooks d'entraînement de tourner AUSSI
    BIEN sur un petit PC portable / un conteneur Docker minimal que sur la VM GPU,
    sans jamais modifier le code. On ne suppose RIEN sur la machine (GPU ? combien
@@ -41,19 +41,14 @@ def course_root():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def data_path(*parts):
-    """Chemin sous `<repo>/data/...` (volume persistant, ignoré par git)."""
-    return os.path.join(course_root(), "data", *parts)
-
-
 def data_in(*parts):
     """Données brutes en ENTRÉE : `<repo>/data/in/...` (téléchargements RSNA, CIFAR…)."""
-    return data_path("in", *parts)
+    return os.path.join(course_root(), "data", "in", *parts)
 
 
 def data_work(*parts):
     """Sorties PRODUITES : `<repo>/data/work/...` (prétraitements, crops, checkpoints…)."""
-    return data_path("work", *parts)
+    return os.path.join(course_root(), "data", "work", *parts)
 
 
 def gmic_dir():
@@ -77,8 +72,9 @@ def selclass_dir():
 #   défaut : un seul batch d'images haute résolution le sature, le worker reçoit
 #   un SIGBUS ("Bus error") et meurt. D'où l'erreur classique :
 #       "DataLoader worker (pid ...) is killed by signal: Bus error"
-#   Le vrai correctif côté infra est `docker run --shm-size=8g`, mais on veut que
-#   le NOTEBOOK reste robuste même quand l'infra est mal configurée.
+#   Le vrai correctif côté infra est `docker run --ipc=host` (fait dans
+#   docker-run.sh ; `--shm-size=8g` marcherait aussi), mais on veut que le
+#   NOTEBOOK reste robuste même quand l'infra est mal configurée.
 #
 # La règle d'or : détecter les capacités réelles, ne jamais les supposer.
 
@@ -158,7 +154,12 @@ def dataloader_kwargs(batch_size=16, shuffle=False, sampler=None, num_workers=No
 
     `sampler` et `shuffle` sont mutuellement exclusifs : si un sampler est fourni
     (ex. WeightedRandomSampler pour équilibrer les classes), `shuffle` est ignoré.
-    Utile quand on veut les kwargs sans créer le loader (ex. bench multi-batch).
+
+    À utiliser partout à la place d'un DataLoader nu, en déballant les kwargs :
+        from torch.utils.data import DataLoader
+        from course_utils import dataloader_kwargs
+        train_loader = DataLoader(train_ds, **dataloader_kwargs(batch_size=64, shuffle=True))
+        bal_loader   = DataLoader(train_ds, **dataloader_kwargs(batch_size=16, sampler=sampler))
     """
     import torch
 
@@ -178,21 +179,6 @@ def dataloader_kwargs(batch_size=16, shuffle=False, sampler=None, num_workers=No
     else:
         kwargs["shuffle"] = shuffle
     return kwargs
-
-
-def make_loader(dataset, batch_size=16, shuffle=False, sampler=None, num_workers=None):
-    """DataLoader portable, à utiliser partout à la place de `DataLoader(...)`.
-
-    Exemple :
-        from course_utils import make_loader
-        train_loader = make_loader(train_ds, batch_size=64, shuffle=True)
-        val_loader   = make_loader(val_ds,   batch_size=128)              # eval
-        bal_loader   = make_loader(train_ds, batch_size=16, sampler=sampler)
-    """
-    from torch.utils.data import DataLoader
-
-    return DataLoader(dataset, **dataloader_kwargs(
-        batch_size=batch_size, shuffle=shuffle, sampler=sampler, num_workers=num_workers))
 
 
 def describe_env():
