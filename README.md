@@ -1,6 +1,6 @@
 # Breast Cancer Course — Deep Learning sur mammographies
 
-Cours pratique en 6 chapitres, du PyTorch de base jusqu'au **contrôle de risque
+Cours pratique en 8 chapitres, du PyTorch de base jusqu'au **contrôle de risque
 garanti** (abstention / selective classification), appliqué à la détection du
 cancer du sein sur mammographies (jeu de données **RSNA**).
 
@@ -52,16 +52,25 @@ contient que l'environnement Python/CUDA.
 
 | # | Notebook | Sujet | GPU |
 |---|----------|-------|-----|
-| 1 | `notebooks/01_download_data.ipynb` | **Télécharger les données RSNA via la clé Kaggle** (prérequis aux ch. 2.5→5) | non |
+| 1 | `notebooks/01_download_data.ipynb` | **Télécharger les données RSNA via la clé Kaggle** (prérequis aux ch. 3→7) | non |
 | 2 | `notebooks/02_pytorch_basics.ipynb` | PyTorch de base : tenseurs, autograd, un réseau de vision simple | non (CPU OK) |
-| 2.5 | `notebooks/02.5_preprocessing.ipynb` | Pré-traitement des mammographies : DICOM → PNG, crop, conversions qui libèrent le CPU (ne laisser que le décodage) | recommandé |
-| 3 | `notebooks/03_resnet18_breast_density.ipynb` | Entraînement multiclasse avec un réseau connu (ResNet-18) — cas d'usage : **densité mammaire** | oui |
-| 4 | `notebooks/04_gmic_architecture.ipynb` | Architecture d'un réseau récent : **GMIC** (ensemble de réseaux) — cas d'usage : **cancer malin RSNA** | oui |
-| 5 | `notebooks/05_gmic_finetuning.ipynb` | Fine-tuning de GMIC sur RSNA | oui |
-| 6 | `notebooks/06_risk_control_abstention.ipynb` | **Risques garantis** (selective classification, papier Beyond Accuracy) et comment appliquer ces fonctions | non (CPU OK) |
+| 3 | `notebooks/03_preprocessing.ipynb` | Pré-traitement des mammographies : DICOM → PNG, crop, conversions qui libèrent le CPU (ne laisser que le décodage) | recommandé |
+| 4 | `notebooks/04_resnet18_breast_density.ipynb` | Entraînement multiclasse avec un réseau connu (ResNet-18) — cas d'usage : **densité mammaire** | oui |
+| 5 | `notebooks/05_bench_normalisation.ipynb` | *Aparté de performance (optionnel)* — qui doit faire le z-score : les workers CPU ou le GPU ? Mesure du débit de la pipeline complète | oui |
+| 6 | `notebooks/06_gmic_architecture.ipynb` | Architecture d'un réseau récent : **GMIC** (ensemble de réseaux) — cas d'usage : **cancer malin RSNA** | oui |
+| 7 | `notebooks/07_gmic_finetuning.ipynb` | Fine-tuning de GMIC sur RSNA | oui |
+| 8 | `notebooks/08_risk_control_abstention.ipynb` | **Risques garantis** (selective classification, papier Beyond Accuracy) et comment appliquer ces fonctions | non (CPU OK) |
 
-> Le chapitre 2 et le chapitre 6 peuvent tourner sur une machine sans GPU
-> puissant. Les chapitres 2.5 à 5 supposent un GPU NVIDIA (entraînements réels).
+> Le chapitre 2 et le chapitre 8 peuvent tourner sur une machine sans GPU
+> puissant. Les chapitres 3 à 7 supposent un GPU NVIDIA (entraînements réels).
+> Le chapitre 5 est un aparté de performance : à lire après le ch4, il n'est
+> prérequis de rien.
+
+**Un seul curseur pour les données.** Les chapitres 3, 4 et 5 exposent tous la même
+variable `DATASET` (`'rsna_sample'` pour la démo du ch1 section A, `'rsna'` pour le dataset
+complet). Le chemin de prétraitement n'est écrit qu'à **un seul endroit**
+(`course_utils.preprocess_dir`), de sorte que le notebook qui écrit et ceux qui lisent ne
+peuvent pas pointer vers deux dossiers différents.
 
 ---
 
@@ -148,7 +157,7 @@ et d'y coller ton token.
 ## Ce que fait l'image Docker
 
 - Base : `pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime` (même stack torch que la VM).
-- Installe les dépendances Python des 6 chapitres avec **`uv`** (déclarées dans `pyproject.toml`).
+- Installe les dépendances Python des 8 chapitres avec **`uv`** (déclarées dans `pyproject.toml`).
 - Crée un utilisateur non-root `deep-piste` **avec l'UID/GID de celui qui build**
   (`--build-arg HOST_UID/HOST_GID`, posés par `docker-build.sh`) : les fichiers écrits
   dans le dépôt monté lui appartiennent, pas à `root`. Le conteneur tourne donc en
@@ -218,7 +227,7 @@ nouveau `git clone`…) repassera à `root:root` et recassera l'écriture → re
 data-capsule-deep-piste/
 ├── README.md              # ce fichier
 ├── Dockerfile             # image GPU + deps Python via uv (sous-modules montés au runtime)
-├── pyproject.toml         # dépendances Python des 6 chapitres (installées via uv)
+├── pyproject.toml         # dépendances Python des 8 chapitres (installées via uv)
 ├── docker-build.sh        # construit l'image
 ├── docker-run.sh          # lance JupyterLab (GPU + volumes)
 ├── .gitmodules            # déclare les 2 sous-modules
@@ -229,5 +238,5 @@ data-capsule-deep-piste/
 ├── modules/               # sous-modules git
 │   ├── GMIC/              #   → nyukat/GMIC (+ 5 poids pré-entraînés)
 │   └── selective-classification/   # → EmilienJemelen/selective-classification
-└── notebooks/             # les 6 chapitres + course_utils.py (helpers, dont course_root())
+└── notebooks/             # les 8 chapitres + course_utils.py (helpers, dont course_root())
 ```

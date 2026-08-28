@@ -30,8 +30,8 @@ dependencies = [
     "pylibjpeg-libjpeg",
     "pylibjpeg-openjpeg",
 
-    # --- Augmentation GPU (ch 5) ---
-    "kornia==0.8.3",
+    # (Plus de kornia : la normalisation GPU du ch5 et de l'annexe 3.5 se fait avec de simples
+    #  opérations tensorielles torch — x.mean/x.std sur le batch. Rien à installer en plus.)
 
     # --- Téléchargement des jeux de données (ch 2.5+) ---
     # kaggle récent (>=1.7) : les tokens d'API actuels exigent une version 2.x-compatible.

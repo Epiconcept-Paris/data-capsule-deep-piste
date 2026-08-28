@@ -1,0 +1,45 @@
+{
+  // Ouvre le dépôt DANS l'image du cours, avec le GPU : VS Code s'exécute alors dans le
+  // conteneur, donc le kernel « local » EST celui qui a torch/cv2/CUDA. Plus besoin de
+  // passer par « Existing Jupyter Server » (le flux qui retombait en arrière).
+  //
+  // Utilisation : Ctrl+Shift+P -> « Dev Containers: Reopen in Container »
+  // (nécessite l'extension ms-vscode-remote.remote-containers)
+  "name": "breast-cancer-course",
+
+  // On réutilise l'image DÉJÀ construite par ./docker-build.sh — aucun rebuild.
+  "image": "breast-cancer-course:latest",
+
+  "workspaceFolder": "/home/deep-piste/course",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/deep-piste/course,type=bind",
+
+  // Mêmes flags que docker-run.sh, et pour les mêmes raisons :
+  //   --gpus all : accès au GPU NVIDIA (nvidia-container-toolkit).
+  //   --ipc=host : partage /dev/shm de l'hôte. Sans ça Docker le limite à 64 Mo et les
+  //                workers du DataLoader meurent en « Bus error » (cf. ch5).
+  "runArgs": ["--gpus", "all", "--ipc=host"],
+
+  // L'image tourne en tant que deep-piste (UID repris de l'hôte au build).
+  "remoteUser": "deep-piste",
+
+  "containerEnv": { "COURSE_ROOT": "/home/deep-piste/course" },
+
+  // Monte les identifiants Kaggle en lecture seule, comme docker-run.sh (ch1).
+  "mounts": [
+    "source=${localWorkspaceFolder}/.kaggle,target=/home/deep-piste/.kaggle,type=bind,readonly"
+  ],
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-toolsai.jupyter"],
+      "settings": {
+        // LE réglage qui règle ton problème : l'interpréteur pointe sur celui du conteneur
+        // (3.11.9 + torch 2.4.1+cu121), pas sur un python local sans ipykernel.
+        "python.defaultInterpreterPath": "/opt/conda/bin/python",
+        "jupyter.kernels.filter": [
+          { "path": "/opt/conda/bin/python", "type": "pythonEnvironment" }
+        ]
+      }
+    }
+  }
+}

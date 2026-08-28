@@ -51,6 +51,154 @@ def data_work(*parts):
     return os.path.join(course_root(), "data", "work", *parts)
 
 
+# Sortie du prétraitement (ch2.5) pour chaque jeu de données d'entrée.
+# UNE seule table pour tout le cours : le ch2.5 ÉCRIT ici, les ch3+ LISENT ici. Tant que
+# tout le monde passe par preprocess_dir(), écrivain et lecteurs ne peuvent pas diverger
+# (le bug classique : le ch2.5 produit preprocess_sample et le ch3 cherche ailleurs).
+_PREPROCESS_DIRS = {
+    "rsna_sample": "preprocess_sample",   # échantillon de démo (ch1 section A)
+    "rsna": "preprocess_image",           # dataset RSNA complet (ch1 section B)
+}
+
+
+def preprocess_dir(dataset, *parts):
+    """Dossier de sortie du prétraitement du ch2.5, pour `dataset` ('rsna_sample' ou 'rsna').
+
+    Exemples :
+        preprocess_dir('rsna_sample')                     -> <repo>/data/work/preprocess_sample
+        preprocess_dir('rsna', 'cropped_images')          -> <repo>/data/work/preprocess_image/cropped_images
+
+    Lève une ValueError sur un nom inconnu : mieux vaut échouer tout de suite que
+    construire un chemin qui n'existera jamais et laisser un `glob` renvoyer une liste vide.
+    """
+    if dataset not in _PREPROCESS_DIRS:
+        raise ValueError(
+            f"dataset inconnu : {dataset!r}. Valeurs possibles : {sorted(_PREPROCESS_DIRS)}")
+    return data_work(_PREPROCESS_DIRS[dataset], *parts)
+
+
+def sample_data(*parts):
+    """Petits extraits de données RÉELLES bundlés avec le cours (committés, contrairement à
+    `data_in`/`data_work` qui sont vides côté git) : `<repo>/notebooks/data_samples/...`."""
+    return os.path.join(course_root(), "notebooks", "data_samples", *parts)
+
+
+def save_run(tag, config, history=(), model=None, **extra):
+    """Archive le bilan d'un entraînement en JSON horodaté ; renvoie le chemin écrit.
+
+    Le notebook ne décrit que ce qui lui est PROPRE ; tout ce qui ne dépend pas du chapitre
+    est rempli ici (horodatage, GPU, version de torch, pic mémoire CUDA, comptes de
+    paramètres, loss finale) — sinon chaque chapitre recopierait le même bloc.
+
+    Args:
+        tag: préfixe du dossier. 'ch7' -> `data_samples/ch7_runs/<AAAAMMJJ-HHMMSS>.json`.
+            Un fichier PAR run : ils s'accumulent au lieu de s'écraser, c'est tout l'intérêt.
+        config: les réglages du run (résolution, batch, lr, régime de gel...). Le champ à
+            relire en premier quand on se demande « qu'est-ce que j'avais lancé ? ».
+        history: un dict par epoch (p. ex. `{'epoch': 1, 'loss': 3.2}`). Sa DERNIÈRE entrée
+            fournit `final_loss`, d'où l'intérêt de la remplir dans l'ordre.
+        model: si fourni, on en tire params totaux / entraînables / gelés. Évite au notebook
+            de recompter, et rend l'archive auto-suffisante pour vérifier le régime après coup.
+        **extra: tout champ libre propre au chapitre (`data=...`, `ms_per_step=...`).
+
+    Deux contraintes du .gitignore dictent le nommage — sans elles l'archive serait perdue :
+      * le dossier s'appelle `<tag>_runs` et NON `runs`, car `runs/` y est ignoré ;
+      * on écrit du JSON, pas du .p/.pkl/.npz/.pt, tous ignorés aussi.
+    """
+    import json
+    from datetime import datetime
+
+    history = list(history)
+    rec = {"tag": tag, "date": datetime.now().isoformat(timespec="seconds"),
+           "config": config, "history": history, **extra}
+    if history:
+        rec["final_loss"] = history[-1].get("loss")
+
+    import torch  # présent dès qu'on a entraîné quelque chose
+
+    rec["env"] = {"torch": torch.__version__,
+                  "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None}
+    if torch.cuda.is_available():
+        rec["peak_mem_gb"] = torch.cuda.max_memory_allocated() / 1e9
+    if model is not None:
+        total = sum(p.numel() for p in model.parameters())
+        trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        rec["params"] = {"total": total, "trainable": trainable, "frozen": total - trainable}
+
+    d = sample_data(f"{tag}_runs")
+    os.makedirs(d, exist_ok=True)
+    path = os.path.join(d, f"{datetime.now().strftime('%Y%m%d-%H%M%S')}.json")
+    with open(path, "w") as f:
+        json.dump(rec, f, indent=2, ensure_ascii=False)
+    return path
+
+
+def predictions_frame(p, y_true, split=None, threshold=0.5):
+    """Table de prédictions au format lu par la classification sélective (ch8).
+
+    Reproduit le schéma de `data_samples/gmic_ens5_nyu_sgp_set.csv`. Les trois colonnes
+    OBLIGATOIRES sont celles que `sgp_dicho` / `sgp_greedy_search` lisent réellement :
+    elles filtrent `Sn.loc[Sn.kappa >= theta]` puis comptent les erreurs sur `y_pred`/`y_true`.
+
+    Args:
+        p: probas prédites de la classe positive, une par échantillon. Sur RSNA, un
+            échantillon = un SEIN (moyenne des vues CC et MLO), pas une image.
+        y_true: labels 0/1, même longueur que `p`.
+        split: 'cal' / 'test' par échantillon, ou None pour omettre la colonne. La
+            calibration doit être un jeu TENU À L'ÉCART de l'entraînement : la garantie
+            suppose des échantillons non utilisés pour ajuster le modèle.
+        threshold: seuil de décision de `y_pred` (0.5 par défaut). Ne PAS le confondre avec
+            le θ de l'abstention : `threshold` décide de la classe, θ décide si on répond.
+
+    Colonnes produites : `p`, `kappa` (= max(p, 1-p), la confiance — elle ne descend jamais
+    sous 0.5, d'où le `theta_min=0.5` par défaut de ces fonctions), `y_pred`, `y_true`,
+    et `split` si fourni.
+    """
+    import numpy as np
+    import pandas as pd
+
+    p = np.asarray(p, dtype=float)
+    df = pd.DataFrame({"p": p,
+                       "kappa": np.maximum(p, 1.0 - p),
+                       "y_pred": (p >= threshold).astype(int),
+                       "y_true": np.asarray(y_true).astype(int)})
+    if split is not None:
+        df["split"] = split
+    return df
+
+
+def auc_score(y_true, y_score):
+    """AUC ROC, ou `None` si l'AUC n'est pas définie sur ces données.
+
+    Pourquoi l'AUC plutôt que la loss pour suivre un entraînement : la loss peut baisser
+    alors que le modèle ne SÉPARE rien (sur un jeu à 2 % de positifs, « réponds toujours
+    non » donne déjà une loss basse). L'AUC ne regarde que l'ORDRE des scores — 0.5 = hasard,
+    1.0 = séparation parfaite — et ne peut pas être flattée par le déséquilibre des classes.
+
+    Args:
+        y_true: labels 0/1.
+        y_score: score continu (une proba, pas une décision binarisée — passer `y_pred`
+            écraserait l'information d'ordre et plafonnerait artificiellement l'AUC).
+
+    Renvoie None si `y_true` ne contient qu'une seule classe : l'AUC mesure une séparation
+    entre deux groupes, elle n'existe pas s'il n'y en a qu'un. Ce cas est FRÉQUENT sur un
+    petit batch en cancer du sein, d'où ce garde-fou plutôt qu'une exception sklearn.
+    """
+    from sklearn.metrics import roc_auc_score
+
+    if len(set(int(v) for v in y_true)) < 2:
+        return None
+    return float(roc_auc_score(y_true, y_score))
+
+
+def list_runs(tag):
+    """Runs archivés pour `tag`, du plus ancien au plus récent (liste de chemins)."""
+    import glob
+
+    d = sample_data(f"{tag}_runs")
+    return sorted(glob.glob(os.path.join(d, "*.json"))) if os.path.isdir(d) else []
+
+
 def gmic_dir():
     """Sous-module GMIC : `<repo>/modules/GMIC`."""
     return os.path.join(course_root(), "modules", "GMIC")

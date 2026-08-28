@@ -1,0 +1,150 @@
+{
+  "tag": "ch7",
+  "date": "2026-08-28T13:20:57",
+  "config": {
+    "dataset": "rsna_sample",
+    "resolution": [
+      704,
+      448
+    ],
+    "fast_demo": true,
+    "cam_size": [
+      11,
+      7
+    ],
+    "crop_shape": [
+      64,
+      64
+    ],
+    "K": 6,
+    "percent_t": 0.02,
+    "batch": 4,
+    "epochs": 20,
+    "lr": 0.0001,
+    "weight_decay": 1e-05,
+    "beta_l1": 0.0002,
+    "freeze_backbone": true,
+    "sampler": "weighted"
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 4.481261094411214,
+      "positifs_vus": 15
+    },
+    {
+      "epoch": 2,
+      "loss": 3.559133609135946,
+      "positifs_vus": 12
+    },
+    {
+      "epoch": 3,
+      "loss": 3.496732403834661,
+      "positifs_vus": 12
+    },
+    {
+      "epoch": 4,
+      "loss": 2.998768279949824,
+      "positifs_vus": 11
+    },
+    {
+      "epoch": 5,
+      "loss": 3.328058739503225,
+      "positifs_vus": 13
+    },
+    {
+      "epoch": 6,
+      "loss": 3.0685992439587912,
+      "positifs_vus": 12
+    },
+    {
+      "epoch": 7,
+      "loss": 2.9514437119166055,
+      "positifs_vus": 13
+    },
+    {
+      "epoch": 8,
+      "loss": 2.0245414351423583,
+      "positifs_vus": 8
+    },
+    {
+      "epoch": 9,
+      "loss": 2.2607770611842475,
+      "positifs_vus": 9
+    },
+    {
+      "epoch": 10,
+      "loss": 1.7290980617205303,
+      "positifs_vus": 7
+    },
+    {
+      "epoch": 11,
+      "loss": 2.718822260697683,
+      "positifs_vus": 11
+    },
+    {
+      "epoch": 12,
+      "loss": 2.723065137863159,
+      "positifs_vus": 12
+    },
+    {
+      "epoch": 13,
+      "loss": 2.1860869179169335,
+      "positifs_vus": 10
+    },
+    {
+      "epoch": 14,
+      "loss": 1.552298496166865,
+      "positifs_vus": 6
+    },
+    {
+      "epoch": 15,
+      "loss": 1.8060333579778671,
+      "positifs_vus": 9
+    },
+    {
+      "epoch": 16,
+      "loss": 1.7518865764141083,
+      "positifs_vus": 8
+    },
+    {
+      "epoch": 17,
+      "loss": 1.6321053405602772,
+      "positifs_vus": 9
+    },
+    {
+      "epoch": 18,
+      "loss": 2.555269638697306,
+      "positifs_vus": 12
+    },
+    {
+      "epoch": 19,
+      "loss": 2.1553008208672204,
+      "positifs_vus": 11
+    },
+    {
+      "epoch": 20,
+      "loss": 2.569400946299235,
+      "positifs_vus": 16
+    }
+  ],
+  "run_kind": "gmic_finetune_ch7",
+  "data": {
+    "n_images": 23,
+    "n_malignant": 2,
+    "batches_per_epoch": 6
+  },
+  "ms_per_step": 83.67749021834686,
+  "backbone_unchanged": true,
+  "final_loss": 2.569400946299235,
+  "env": {
+    "torch": "2.4.1+cu121",
+    "gpu": "Quadro P1000"
+  },
+  "peak_mem_gb": 0.127396864,
+  "params": {
+    "total": 14110322,
+    "trainable": 134274,
+    "frozen": 13976048
+  }
+}

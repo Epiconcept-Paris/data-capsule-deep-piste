@@ -1,0 +1,16 @@
+{
+  // L'environnement du cours vit dans .venv à la racine du dépôt (torch 2.4.1+cu121,
+  // torchvision, opencv, pydicom…). Sans ce réglage, VS Code découvre les Python gérés par
+  // uv (~/.local/share/uv/python/...) et tente d'y démarrer un kernel : ils n'ont pas
+  // ipykernel, le kernel meurt, et le sélecteur repart en arrière sans message clair.
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+  // Le dépôt entier doit être sur le sys.path pour que `from course_utils import ...`
+  // fonctionne depuis notebooks/ (les notebooks ajoutent eux-mêmes modules/GMIC).
+  "jupyter.notebookFileRoot": "${workspaceFolder}/notebooks",
+  "jupyter.kernels.excludePythonEnvironments": [
+    "~/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/bin/python",
+    "~/.local/share/uv/python/cpython-3.14-linux-x86_64-gnu/bin/python",
+    "/usr/bin/python3"
+  ]
+}
