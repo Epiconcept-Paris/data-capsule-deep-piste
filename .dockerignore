@@ -12,6 +12,7 @@ notebooks
 README.md
 docker-build.sh
 docker-run.sh
+*.pdf
 **/.ipynb_checkpoints
 **/__pycache__
 *.pyc

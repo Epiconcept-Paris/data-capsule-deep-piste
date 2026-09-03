@@ -51,10 +51,10 @@ def data_work(*parts):
     return os.path.join(course_root(), "data", "work", *parts)
 
 
-# Sortie du prétraitement (ch2.5) pour chaque jeu de données d'entrée.
-# UNE seule table pour tout le cours : le ch2.5 ÉCRIT ici, les ch3+ LISENT ici. Tant que
+# Sortie du prétraitement (ch3) pour chaque jeu de données d'entrée.
+# UNE seule table pour tout le cours : le ch3 ÉCRIT ici, les ch4+ LISENT ici. Tant que
 # tout le monde passe par preprocess_dir(), écrivain et lecteurs ne peuvent pas diverger
-# (le bug classique : le ch2.5 produit preprocess_sample et le ch3 cherche ailleurs).
+# (le bug classique : le ch3 produit preprocess_sample et le ch4 cherche ailleurs).
 _PREPROCESS_DIRS = {
     "rsna_sample": "preprocess_sample",   # échantillon de démo (ch1 section A)
     "rsna": "preprocess_image",           # dataset RSNA complet (ch1 section B)
@@ -62,7 +62,7 @@ _PREPROCESS_DIRS = {
 
 
 def preprocess_dir(dataset, *parts):
-    """Dossier de sortie du prétraitement du ch2.5, pour `dataset` ('rsna_sample' ou 'rsna').
+    """Dossier de sortie du prétraitement du ch3, pour `dataset` ('rsna_sample' ou 'rsna').
 
     Exemples :
         preprocess_dir('rsna_sample')                     -> <repo>/data/work/preprocess_sample

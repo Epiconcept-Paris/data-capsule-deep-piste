@@ -22,9 +22,28 @@ COURSE_MNT="/home/deep-piste/course"
 
 # Les notebooks lisent GMIC / selective-classification depuis modules/ (des
 # sous-modules git). S'ils ne sont pas encore récupérés, on le fait maintenant.
-if [ ! -f modules/GMIC/models/sample_model_1.p ]; then
-    echo ">> Sous-modules non initialisés -> git submodule update --init --recursive"
-    git submodule update --init --recursive
+# UN marqueur PAR sous-module : un `git clone --recurse-submodules` peut très bien
+# remplir GMIC et laisser l'autre vide (échec réseau sur un seul des deux clones —
+# git le signale mais rend quand même la main). Ne tester que GMIC laisserait alors
+# passer un modules/selective-classification vide, et le ch8 casserait bien plus
+# tard, loin de la cause.
+if [ ! -f modules/GMIC/models/sample_model_1.p ] || \
+   [ ! -f modules/selective-classification/__init__.py ]; then
+    echo ">> Sous-modules incomplets -> git submodule update --init --recursive"
+    git submodule update --init --recursive || true
+fi
+
+# On vérifie ensuite pour de vrai : `git submodule status` préfixe d'un « - » tout
+# sous-module non initialisé. Mieux vaut s'arrêter ICI avec un message explicite que
+# démarrer JupyterLab sur des modules/ vides et laisser l'erreur surgir au ch6/ch8.
+if git submodule status | grep -q '^-'; then
+    echo "ERREUR : sous-module(s) non initialisé(s) :" >&2
+    git submodule status | grep '^-' | sed 's/^/    /' >&2
+    echo "  -> relance : git submodule update --init --recursive" >&2
+    echo "     (si le reseau echoue de facon repetee, forcer HTTP/1.1 :" >&2
+    echo "      git -c http.version=HTTP/1.1 -c protocol.version=1 \\" >&2
+    echo "          submodule update --init --recursive)" >&2
+    exit 1
 fi
 
 # Identifiants Kaggle, relatifs au dépôt (jamais via $HOME). Le dossier .kaggle/

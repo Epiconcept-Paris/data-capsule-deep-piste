@@ -96,10 +96,17 @@ git), donc elles persistent entre deux `docker run`. Convention : `data/in/` pou
 
 ```bash
 # 1. Cloner ce dépôt AVEC ses sous-modules (GMIC + selective-classification)
-git clone --recurse-submodules git@github.com:Epiconcept-Paris/data-capsule-deep-piste.git
+#    Le dépôt est public : l'URL HTTPS marche partout, sans authentification.
+git clone --recurse-submodules https://github.com/Epiconcept-Paris/data-capsule-deep-piste.git
+#    (variante SSH, seulement si tu as déjà une clé SSH déclarée sur GitHub —
+#     sinon elle échoue sur « Permission denied (publickey) ») :
+#    git clone --recurse-submodules git@github.com:Epiconcept-Paris/data-capsule-deep-piste.git
 cd data-capsule-deep-piste
-# (si déjà cloné sans --recurse-submodules :)
+# (si déjà cloné sans --recurse-submodules, ou si un sous-module est resté vide :)
 git submodule update --init --recursive
+# Vérifie que les DEUX sous-modules sont remplis : chaque ligne doit commencer par un
+# ESPACE. Un « - » en tête = sous-module vide -> relance la commande ci-dessus.
+git submodule status
 
 # 2. Configurer Kaggle (voir section dédiée) — une seule fois
 #    => place ton token (access_token) dans le dossier .kaggle/ à la racine du dépôt
@@ -117,6 +124,17 @@ ssh -L 8888:localhost:8888 <votre-alias-vm>
 
 Le kernel Jupyter (donc les entraînements) s'exécute **dans le conteneur sur la
 VM**, avec le GPU. Le tunnel SSH ne transporte que l'interface web.
+
+> ⚠️ **Ne remplace pas `127.0.0.1:8888:8888` par `8888:8888`.** JupyterLab tourne
+> **sans mot de passe ni token** (`--ServerApp.token=` dans le `Dockerfile`) : c'est
+> confortable, et sans danger *tant que* le port n'est publié que sur la boucle
+> locale de la VM — on y accède alors uniquement par le tunnel SSH, donc seulement
+> avec un accès SSH à la VM. Publier le port sur `0.0.0.0` (ou lancer avec
+> `--network host`) l'expose au réseau, et **quiconque l'atteint exécute du code
+> arbitraire sur le GPU**. Même remarque si la VM est partagée : tout compte ayant
+> un shell sur la machine atteint `127.0.0.1:8888`. Dans ce cas, retire
+> `--ServerApp.token=` / `--ServerApp.password=` du `Dockerfile` pour que Jupyter
+> génère un token aléatoire, et connecte-toi via l'URL complète qu'il affiche.
 
 Une fois dans JupyterLab, commencez par **`notebooks/01_download_data.ipynb`**
 pour récupérer le jeu RSNA via la clé Kaggle, puis suivez les chapitres dans
