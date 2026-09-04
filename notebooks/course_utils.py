@@ -191,6 +191,37 @@ def auc_score(y_true, y_score):
     return float(roc_auc_score(y_true, y_score))
 
 
+def auc_ovr(y_true, proba, names="ABCD"):
+    """AUC 1-vs-all pour chaque classe, plus la moyenne macro. Dict {classe: auc, "macro": ...}.
+
+    Pourquoi l'AUC 1-vs-all plutôt que l'accuracy sur du multiclasse déséquilibré : avec des
+    densités mammaires B et C qui font 84 % des cas, un modèle qui répond TOUJOURS « B »
+    décroche une accuracy flatteuse sans rien discriminer. Ici ce collapse tombe à 0.500
+    exactement — l'AUC ne regarde que l'ORDRE des scores, elle ne peut pas être gonflée par
+    la fréquence d'une classe.
+
+    Args:
+        y_true: labels entiers 0..len(names)-1.
+        proba: tableau (n, len(names)) de PROBABILITÉS (softmax), pas des décisions
+            argmax — binariser écraserait l'information d'ordre dont vit l'AUC.
+        names: noms des classes, dans l'ordre des colonnes de `proba`.
+
+    Chaque classe absente de `y_true` vaut None (délégué à `auc_score` : une AUC compare deux
+    groupes, elle n'existe pas s'il n'y en a qu'un). C'est fréquent sur un petit échantillon
+    dont le split laisse une seule densité en test — et c'est précisément le cas où
+    l'accuracy affiche 1.000 en ne mesurant rien. "macro" ne moyenne que les classes définies,
+    et vaut None si aucune ne l'est.
+    """
+    import numpy as np
+
+    y_true, proba = np.asarray(y_true), np.asarray(proba)
+    out = {names[k]: auc_score((y_true == k).astype(int), proba[:, k])
+           for k in range(len(names))}
+    defined = [v for v in out.values() if v is not None]
+    out["macro"] = float(np.mean(defined)) if defined else None
+    return out
+
+
 def list_runs(tag):
     """Runs archivés pour `tag`, du plus ancien au plus récent (liste de chemins)."""
     import glob
